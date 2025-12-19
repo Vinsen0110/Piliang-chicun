@@ -1,0 +1,332 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Kitty公主图片批量缩放屋</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/FileSaver.js/2.0.5/FileSaver.min.js"></script>
+    <style>
+        /* --- 整体风格定义 --- */
+        :root {
+            --main-pink: #FFB6C1; /* 浅粉 */
+            --hot-pink: #FF69B4;  /* 热粉 */
+            --dark-pink: #DB7093; /* 深粉 */
+            --bg-pink: #FFF0F5;   /* 背景淡粉 */
+        }
+
+        /* 自定义鼠标指针 (尝试加载可爱的光标) */
+        body {
+            font-family: 'Comic Sans MS', '幼圆', '微软雅黑', cursive, sans-serif; /* 使用可爱的字体 */
+            background-color: var(--bg-pink);
+            /* 添加可爱的背景纹理 */
+            background-image: radial-gradient(var(--main-pink) 15%, transparent 16%),
+                              radial-gradient(var(--main-pink) 15%, transparent 16%);
+            background-size: 60px 60px;
+            background-position: 0 0, 30px 30px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            margin: 0;
+            /* 备用方案：如果找不到Kitty光标，使用默认的，但尽量尝试加载 */
+            cursor: url('https://cdn.custom-cursor.com/db/cursor/32/hello_kitty_cursor.png'), auto;
+        }
+
+        /* 主容器卡片 */
+        .container {
+            background: #fff;
+            padding: 35px;
+            border-radius: 30px; /* 超大圆角 */
+            box-shadow: 0 8px 25px rgba(255, 105, 180, 0.3); /* 粉色投影 */
+            width: 480px;
+            text-align: center;
+            border: 4px solid var(--main-pink); /* 粉色边框 */
+            position: relative;
+            overflow: hidden;
+        }
+        
+        /* 顶部装饰条 */
+        .container::before {
+            content: '🎀';
+            position: absolute;
+            top: 10px;
+            left: 10px;
+            font-size: 24px;
+        }
+        .container::after {
+            content: '🎀';
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            font-size: 24px;
+        }
+
+        /* Kitty Logo */
+        .kitty-logo {
+            width: 120px;
+            height: auto;
+            margin-bottom: 10px;
+            /* 给图片加个可爱的晃动动画 */
+            animation: float 3s ease-in-out infinite;
+        }
+        @keyframes float {
+            0%, 100% { transform: translateY(0); }
+            50% { transform: translateY(-10px); }
+        }
+
+        h2 {
+            color: var(--hot-pink);
+            margin-bottom: 25px;
+            text-shadow: 2px 2px 0px #FFF, 3px 3px 0px var(--main-pink);
+            font-size: 28px;
+        }
+
+        /* 输入框组 */
+        .input-group {
+            margin-bottom: 18px;
+            text-align: left;
+            background: var(--bg-pink);
+            padding: 10px 15px;
+            border-radius: 15px;
+            border: 2px solid var(--main-pink);
+        }
+        label {
+            display: block;
+            margin-bottom: 8px;
+            color: var(--dark-pink);
+            font-weight: bold;
+        }
+        label::before {
+            content: '🌸 ';
+        }
+        input[type="number"] {
+            width: 100%;
+            padding: 12px;
+            border: 2px solid var(--main-pink);
+            border-radius: 10px;
+            box-sizing: border-box;
+            font-size: 16px;
+            color: var(--dark-pink);
+            outline: none;
+            transition: all 0.3s;
+        }
+        input[type="number"]:focus {
+            border-color: var(--hot-pink);
+            box-shadow: 0 0 8px var(--main-pink);
+        }
+
+        /* 文件上传区域 */
+        .file-area {
+            border: 3px dashed var(--hot-pink);
+            padding: 25px;
+            border-radius: 20px;
+            margin: 25px 0;
+            background: #fff5f8;
+            cursor: url('https://cdn.custom-cursor.com/db/pointer/32/hello_kitty_pointer.png'), pointer; /* 指向链接时的光标 */
+            transition: all 0.3s;
+            color: var(--dark-pink);
+            font-weight: bold;
+        }
+        .file-area:hover {
+            border-color: var(--dark-pink);
+            background: #ffe4ef;
+            transform: scale(1.02); /* 轻微放大 */
+        }
+        .file-area p::before {
+            content: '🎁 ';
+            font-size: 24px;
+        }
+
+        /* --- 核心交互按钮 (重点美化) --- */
+        button {
+            /* 粉色渐变背景 */
+            background: linear-gradient(to bottom, var(--hot-pink), var(--dark-pink));
+            color: white;
+            border: none;
+            padding: 15px 30px;
+            font-size: 18px;
+            font-weight: bold;
+            border-radius: 50px; /* 胶囊形状 */
+            cursor: url('https://cdn.custom-cursor.com/db/pointer/32/hello_kitty_pointer.png'), pointer;
+            width: 100%;
+            box-shadow: 0 5px 15px rgba(255, 105, 180, 0.4);
+            transition: all 0.2s cubic-bezier(0.175, 0.885, 0.32, 1.275); /* 有弹性的过渡 */
+            position: relative;
+            overflow: hidden;
+        }
+        
+        /* 按钮上的光泽效果 */
+        button::after {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 50%;
+            background: rgba(255,255,255,0.2);
+            border-radius: 50px 50px 0 0;
+        }
+
+        button:hover {
+             background: linear-gradient(to bottom, #ff7ac1, #e0608c);
+             transform: translateY(-3px); /* 悬停上浮 */
+             box-shadow: 0 8px 20px rgba(255, 105, 180, 0.6);
+        }
+
+        /* 点击时的Q弹放大效果 */
+        button:active {
+            transform: scale(1.1) translateY(0); /* 点击放大! */
+            box-shadow: 0 2px 5px rgba(255, 105, 180, 0.4);
+            background: linear-gradient(to bottom, var(--dark-pink), var(--hot-pink)); /* 点击反色 */
+        }
+
+        button:disabled {
+            background: #ffc0cb;
+            color: #fff;
+            box-shadow: none;
+            cursor: not-allowed;
+            transform: none !important;
+        }
+
+        #status {
+            margin-top: 20px;
+            font-size: 16px;
+            color: var(--dark-pink);
+            font-weight: bold;
+        }
+        .tips {
+            font-size: 13px;
+            color: #999;
+            margin-top: 20px;
+            text-align: left;
+            background: #fff0f5;
+            padding: 10px;
+            border-radius: 10px;
+        }
+        .tips::before {
+             content: '🐱 小贴士：';
+             font-weight: bold;
+             color: var(--hot-pink);
+        }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <img src="https://youke2.picui.cn/s1/2025/12/19/694503a8d81cb.png" alt="Hello Kitty" class="kitty-logo">
+    
+    <h2>🎀 Hello Kitty 改图屋 🎀</h2>
+    
+    <div class="input-group">
+        <label>想要的最大宽度 (Width):</label>
+        <input type="number" id="maxWidth" value="800">
+    </div>
+    <div class="input-group">
+        <label>想要的最大高度 (Height):</label>
+        <input type="number" id="maxHeight" value="800">
+    </div>
+
+    <div class="file-area" onclick="document.getElementById('fileInput').click()">
+        <p>点这里把照片交给 Kitty 吧 (支持多选) ✨</p>
+        <input type="file" id="fileInput" multiple accept="image/*" style="display:none" onchange="updateFileCount()">
+    </div>
+    
+    <div id="fileCount" style="margin-bottom: 15px; color: var(--hot-pink); font-weight: bold;"></div>
+
+    <button id="processBtn" onclick="processImages()">💖 开始变身并下载! 💖</button>
+    
+    <div id="status"></div>
+    
+    <div class="tips">
+        Kitty 会施展魔法，让图片保持原来的身材比例，然后乖乖钻进你设定的大小框框里哦！不会变胖或变瘦的~
+    </div>
+</div>
+
+<script>
+    // JavaScript 功能代码保持不变
+    function updateFileCount() {
+        const input = document.getElementById('fileInput');
+        const countDiv = document.getElementById('fileCount');
+        if (input.files.length > 0) {
+            countDiv.textContent = `🐱 已收到 ${input.files.length} 张可爱的图片!`;
+        } else {
+            countDiv.textContent = "";
+        }
+    }
+
+    async function processImages() {
+        const fileInput = document.getElementById('fileInput');
+        const maxWidth = parseInt(document.getElementById('maxWidth').value);
+        const maxHeight = parseInt(document.getElementById('maxHeight').value);
+        const status = document.getElementById('status');
+        const btn = document.getElementById('processBtn');
+
+        if (fileInput.files.length === 0) {
+            alert("还没选择图片呢，Kitty 等你哦！");
+            return;
+        }
+
+        btn.disabled = true;
+        btn.innerHTML = "⏳ Kitty 正在努力施法中...";
+        status.textContent = "✨ 正在变身中，请稍候...";
+
+        const zip = new JSZip();
+        const promises = [];
+
+        for (let file of fileInput.files) {
+            promises.push(new Promise((resolve) => {
+                const reader = new FileReader();
+                reader.readAsDataURL(file);
+                reader.onload = function(event) {
+                    const img = new Image();
+                    img.src = event.target.result;
+                    img.onload = function() {
+                        let width = img.width;
+                        let height = img.height;
+                        let ratio = 1;
+
+                        if (width > maxWidth || height > maxHeight) {
+                            const widthRatio = maxWidth / width;
+                            const heightRatio = maxHeight / height;
+                            ratio = Math.min(widthRatio, heightRatio);
+                            width = Math.floor(width * ratio);
+                            height = Math.floor(height * ratio);
+                        }
+
+                        const canvas = document.createElement('canvas');
+                        canvas.width = width;
+                        canvas.height = height;
+                        const ctx = canvas.getContext('2d');
+                        
+                        ctx.imageSmoothingEnabled = true;
+                        ctx.imageSmoothingQuality = "high";
+                        
+                        ctx.drawImage(img, 0, 0, width, height);
+
+                        let mimeType = file.type === 'image/jpeg' ? 'image/jpeg' : 'image/png';
+                        
+                        canvas.toBlob(function(blob) {
+                            zip.file(file.name, blob);
+                            resolve();
+                        }, mimeType, 0.95);
+                    };
+                };
+            }));
+        }
+
+        await Promise.all(promises);
+
+        status.textContent = "🎁 变身完成！正在打包礼物盒...";
+        
+        zip.generateAsync({type:"blob"}).then(function(content) {
+            saveAs(content, "Kitty处理好的图片.zip");
+            status.innerHTML = "✅ 完成啦！礼物盒已经送达 (已自动下载) 🎉";
+            btn.disabled = false;
+            btn.innerHTML = "💖 开始变身并下载! 💖";
+        });
+    }
+</script>
+
+</body>
+</html>
