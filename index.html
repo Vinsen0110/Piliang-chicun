@@ -117,7 +117,7 @@
             box-shadow: 0 0 8px var(--main-pink);
         }
 
-        /* --- 新增：快捷按钮区域样式 --- */
+        /* --- 快捷按钮区域样式 --- */
         .preset-area {
             margin-bottom: 20px;
             display: flex;
@@ -131,7 +131,6 @@
             font-size: 14px;
         }
         .preset-btn {
-            /* 继承部分主按钮样式但做小一点 */
             background: linear-gradient(to bottom, #ff9ec6, #DB7093);
             color: white;
             border: none;
@@ -140,7 +139,7 @@
             font-weight: bold;
             border-radius: 20px;
             cursor: pointer;
-            width: auto; /* 不占满全宽 */
+            width: auto;
             box-shadow: 0 3px 8px rgba(255, 105, 180, 0.3);
             transition: all 0.2s;
         }
@@ -174,9 +173,8 @@
             font-size: 24px;
         }
 
-        /* --- 核心交互按钮 (重点美化) --- */
+        /* --- 核心交互按钮 --- */
         button.main-btn {
-            /* 粉色渐变背景 */
             background: linear-gradient(to bottom, var(--hot-pink), var(--dark-pink));
             color: white;
             border: none;
@@ -187,12 +185,11 @@
             cursor: url('https://cdn.custom-cursor.com/db/pointer/32/hello_kitty_pointer.png'), pointer;
             width: 100%;
             box-shadow: 0 5px 15px rgba(255, 105, 180, 0.4);
-            transition: all 0.2s cubic-bezier(0.175, 0.885, 0.32, 1.275); /* 有弹性的过渡 */
+            transition: all 0.2s cubic-bezier(0.175, 0.885, 0.32, 1.275);
             position: relative;
             overflow: hidden;
         }
         
-        /* 按钮上的光泽效果 */
         button.main-btn::after {
             content: '';
             position: absolute;
@@ -206,15 +203,14 @@
 
         button.main-btn:hover {
              background: linear-gradient(to bottom, #ff7ac1, #e0608c);
-             transform: translateY(-3px); /* 悬停上浮 */
+             transform: translateY(-3px);
              box-shadow: 0 8px 20px rgba(255, 105, 180, 0.6);
         }
 
-        /* 点击时的Q弹放大效果 */
         button.main-btn:active {
-            transform: scale(1.1) translateY(0); /* 点击放大! */
+            transform: scale(1.1) translateY(0);
             box-shadow: 0 2px 5px rgba(255, 105, 180, 0.4);
-            background: linear-gradient(to bottom, var(--dark-pink), var(--hot-pink)); /* 点击反色 */
+            background: linear-gradient(to bottom, var(--dark-pink), var(--hot-pink));
         }
 
         button:disabled {
@@ -286,7 +282,6 @@
 </div>
 
 <script>
-    // 新增：应用预设尺寸的功能
     function applyPreset(w, h) {
         document.getElementById('maxWidth').value = w;
         document.getElementById('maxHeight').value = h;
@@ -320,16 +315,12 @@
 
         const zip = new JSZip();
         
-        // --- 逻辑修改：确定文件夹名称 ---
-        // 默认为 Kitty处理好的图片，如果有文件，则使用第一张图片的名称(去掉后缀)
         let folderName = "Kitty处理好的图片";
         if (fileInput.files.length > 0) {
             const firstFileName = fileInput.files[0].name;
-            // 去掉后缀名作为文件夹名
             folderName = firstFileName.substring(0, firstFileName.lastIndexOf('.')) || firstFileName;
         }
 
-        // 在压缩包内创建一个以该名称命名的文件夹
         const imgFolder = zip.folder(folderName);
         
         const promises = [];
@@ -367,7 +358,6 @@
                         let mimeType = file.type === 'image/jpeg' ? 'image/jpeg' : 'image/png';
                         
                         canvas.toBlob(function(blob) {
-                            // 将文件放入文件夹中，而不是根目录
                             imgFolder.file(file.name, blob);
                             resolve();
                         }, mimeType, 0.95);
@@ -381,7 +371,6 @@
         status.textContent = "🎁 变身完成！正在打包礼物盒...";
         
         zip.generateAsync({type:"blob"}).then(function(content) {
-            // 下载的文件名也和文件夹名一致
             saveAs(content, folderName + ".zip");
             status.innerHTML = "✅ 完成啦！礼物盒已经送达 (已自动下载) 🎉";
             btn.disabled = false;
@@ -392,4 +381,3 @@
 
 </body>
 </html>
-
