@@ -117,6 +117,41 @@
             box-shadow: 0 0 8px var(--main-pink);
         }
 
+        /* --- 新增：快捷按钮区域样式 --- */
+        .preset-area {
+            margin-bottom: 20px;
+            display: flex;
+            justify-content: center;
+            gap: 10px;
+            align-items: center;
+        }
+        .preset-label {
+            color: var(--dark-pink);
+            font-weight: bold;
+            font-size: 14px;
+        }
+        .preset-btn {
+            /* 继承部分主按钮样式但做小一点 */
+            background: linear-gradient(to bottom, #ff9ec6, #DB7093);
+            color: white;
+            border: none;
+            padding: 8px 15px;
+            font-size: 14px;
+            font-weight: bold;
+            border-radius: 20px;
+            cursor: pointer;
+            width: auto; /* 不占满全宽 */
+            box-shadow: 0 3px 8px rgba(255, 105, 180, 0.3);
+            transition: all 0.2s;
+        }
+        .preset-btn:hover {
+            transform: translateY(-2px);
+            background: linear-gradient(to bottom, #ff7ac1, #e0608c);
+        }
+        .preset-btn:active {
+            transform: scale(0.95);
+        }
+
         /* 文件上传区域 */
         .file-area {
             border: 3px dashed var(--hot-pink);
@@ -140,7 +175,7 @@
         }
 
         /* --- 核心交互按钮 (重点美化) --- */
-        button {
+        button.main-btn {
             /* 粉色渐变背景 */
             background: linear-gradient(to bottom, var(--hot-pink), var(--dark-pink));
             color: white;
@@ -158,7 +193,7 @@
         }
         
         /* 按钮上的光泽效果 */
-        button::after {
+        button.main-btn::after {
             content: '';
             position: absolute;
             top: 0;
@@ -169,14 +204,14 @@
             border-radius: 50px 50px 0 0;
         }
 
-        button:hover {
+        button.main-btn:hover {
              background: linear-gradient(to bottom, #ff7ac1, #e0608c);
              transform: translateY(-3px); /* 悬停上浮 */
              box-shadow: 0 8px 20px rgba(255, 105, 180, 0.6);
         }
 
         /* 点击时的Q弹放大效果 */
-        button:active {
+        button.main-btn:active {
             transform: scale(1.1) translateY(0); /* 点击放大! */
             box-shadow: 0 2px 5px rgba(255, 105, 180, 0.4);
             background: linear-gradient(to bottom, var(--dark-pink), var(--hot-pink)); /* 点击反色 */
@@ -228,6 +263,12 @@
         <input type="number" id="maxHeight" value="800">
     </div>
 
+    <div class="preset-area">
+        <span class="preset-label">✨ 快速变身:</span>
+        <button class="preset-btn" onclick="applyPreset(800, 800)">800 × 800</button>
+        <button class="preset-btn" onclick="applyPreset(750, 1000)">750 × 1000</button>
+    </div>
+
     <div class="file-area" onclick="document.getElementById('fileInput').click()">
         <p>点这里把照片交给 Kitty 吧 (支持多选) ✨</p>
         <input type="file" id="fileInput" multiple accept="image/*" style="display:none" onchange="updateFileCount()">
@@ -235,7 +276,7 @@
     
     <div id="fileCount" style="margin-bottom: 15px; color: var(--hot-pink); font-weight: bold;"></div>
 
-    <button id="processBtn" onclick="processImages()">💖 开始变身并下载! 💖</button>
+    <button id="processBtn" class="main-btn" onclick="processImages()">💖 开始变身并下载! 💖</button>
     
     <div id="status"></div>
     
@@ -245,7 +286,12 @@
 </div>
 
 <script>
-    // JavaScript 功能代码保持不变
+    // 新增：应用预设尺寸的功能
+    function applyPreset(w, h) {
+        document.getElementById('maxWidth').value = w;
+        document.getElementById('maxHeight').value = h;
+    }
+
     function updateFileCount() {
         const input = document.getElementById('fileInput');
         const countDiv = document.getElementById('fileCount');
@@ -273,6 +319,19 @@
         status.textContent = "✨ 正在变身中，请稍候...";
 
         const zip = new JSZip();
+        
+        // --- 逻辑修改：确定文件夹名称 ---
+        // 默认为 Kitty处理好的图片，如果有文件，则使用第一张图片的名称(去掉后缀)
+        let folderName = "Kitty处理好的图片";
+        if (fileInput.files.length > 0) {
+            const firstFileName = fileInput.files[0].name;
+            // 去掉后缀名作为文件夹名
+            folderName = firstFileName.substring(0, firstFileName.lastIndexOf('.')) || firstFileName;
+        }
+
+        // 在压缩包内创建一个以该名称命名的文件夹
+        const imgFolder = zip.folder(folderName);
+        
         const promises = [];
 
         for (let file of fileInput.files) {
@@ -308,7 +367,8 @@
                         let mimeType = file.type === 'image/jpeg' ? 'image/jpeg' : 'image/png';
                         
                         canvas.toBlob(function(blob) {
-                            zip.file(file.name, blob);
+                            // 将文件放入文件夹中，而不是根目录
+                            imgFolder.file(file.name, blob);
                             resolve();
                         }, mimeType, 0.95);
                     };
@@ -321,7 +381,8 @@
         status.textContent = "🎁 变身完成！正在打包礼物盒...";
         
         zip.generateAsync({type:"blob"}).then(function(content) {
-            saveAs(content, "Kitty处理好的图片.zip");
+            // 下载的文件名也和文件夹名一致
+            saveAs(content, folderName + ".zip");
             status.innerHTML = "✅ 完成啦！礼物盒已经送达 (已自动下载) 🎉";
             btn.disabled = false;
             btn.innerHTML = "💖 开始变身并下载! 💖";
@@ -331,4 +392,3 @@
 
 </body>
 </html>
-
