@@ -1,383 +1,203 @@
 <!DOCTYPE html>
 <html lang="zh-CN">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Kitty公主图片批量缩放屋</title>
-    <link rel="icon" type="image/png" href="kitty.png">
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/FileSaver.js/2.0.5/FileSaver.min.js"></script>
-    <style>
-        /* --- 整体风格定义 --- */
-        :root {
-            --main-pink: #FFB6C1; /* 浅粉 */
-            --hot-pink: #FF69B4;  /* 热粉 */
-            --dark-pink: #DB7093; /* 深粉 */
-            --bg-pink: #FFF0F5;   /* 背景淡粉 */
-        }
-
-        /* 自定义鼠标指针 (尝试加载可爱的光标) */
-        body {
-            font-family: 'Comic Sans MS', '幼圆', '微软雅黑', cursive, sans-serif; /* 使用可爱的字体 */
-            background-color: var(--bg-pink);
-            /* 添加可爱的背景纹理 */
-            background-image: radial-gradient(var(--main-pink) 15%, transparent 16%),
-                              radial-gradient(var(--main-pink) 15%, transparent 16%);
-            background-size: 60px 60px;
-            background-position: 0 0, 30px 30px;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            min-height: 100vh;
-            margin: 0;
-            /* 备用方案：如果找不到Kitty光标，使用默认的，但尽量尝试加载 */
-            cursor: url('https://cdn.custom-cursor.com/db/cursor/32/hello_kitty_cursor.png'), auto;
-        }
-
-        /* 主容器卡片 */
-        .container {
-            background: #fff;
-            padding: 35px;
-            border-radius: 30px; /* 超大圆角 */
-            box-shadow: 0 8px 25px rgba(255, 105, 180, 0.3); /* 粉色投影 */
-            width: 480px;
-            text-align: center;
-            border: 4px solid var(--main-pink); /* 粉色边框 */
-            position: relative;
-            overflow: hidden;
-        }
-        
-        /* 顶部装饰条 */
-        .container::before {
-            content: '🎀';
-            position: absolute;
-            top: 10px;
-            left: 10px;
-            font-size: 24px;
-        }
-        .container::after {
-            content: '🎀';
-            position: absolute;
-            top: 10px;
-            right: 10px;
-            font-size: 24px;
-        }
-
-        /* Kitty Logo */
-        .kitty-logo {
-            width: 120px;
-            height: auto;
-            margin-bottom: 10px;
-            /* 给图片加个可爱的晃动动画 */
-            animation: float 3s ease-in-out infinite;
-        }
-        @keyframes float {
-            0%, 100% { transform: translateY(0); }
-            50% { transform: translateY(-10px); }
-        }
-
-        h2 {
-            color: var(--hot-pink);
-            margin-bottom: 25px;
-            text-shadow: 2px 2px 0px #FFF, 3px 3px 0px var(--main-pink);
-            font-size: 28px;
-        }
-
-        /* 输入框组 */
-        .input-group {
-            margin-bottom: 18px;
-            text-align: left;
-            background: var(--bg-pink);
-            padding: 10px 15px;
-            border-radius: 15px;
-            border: 2px solid var(--main-pink);
-        }
-        label {
-            display: block;
-            margin-bottom: 8px;
-            color: var(--dark-pink);
-            font-weight: bold;
-        }
-        label::before {
-            content: '🌸 ';
-        }
-        input[type="number"] {
-            width: 100%;
-            padding: 12px;
-            border: 2px solid var(--main-pink);
-            border-radius: 10px;
-            box-sizing: border-box;
-            font-size: 16px;
-            color: var(--dark-pink);
-            outline: none;
-            transition: all 0.3s;
-        }
-        input[type="number"]:focus {
-            border-color: var(--hot-pink);
-            box-shadow: 0 0 8px var(--main-pink);
-        }
-
-        /* --- 快捷按钮区域样式 --- */
-        .preset-area {
-            margin-bottom: 20px;
-            display: flex;
-            justify-content: center;
-            gap: 10px;
-            align-items: center;
-        }
-        .preset-label {
-            color: var(--dark-pink);
-            font-weight: bold;
-            font-size: 14px;
-        }
-        .preset-btn {
-            background: linear-gradient(to bottom, #ff9ec6, #DB7093);
-            color: white;
-            border: none;
-            padding: 8px 15px;
-            font-size: 14px;
-            font-weight: bold;
-            border-radius: 20px;
-            cursor: pointer;
-            width: auto;
-            box-shadow: 0 3px 8px rgba(255, 105, 180, 0.3);
-            transition: all 0.2s;
-        }
-        .preset-btn:hover {
-            transform: translateY(-2px);
-            background: linear-gradient(to bottom, #ff7ac1, #e0608c);
-        }
-        .preset-btn:active {
-            transform: scale(0.95);
-        }
-
-        /* 文件上传区域 */
-        .file-area {
-            border: 3px dashed var(--hot-pink);
-            padding: 25px;
-            border-radius: 20px;
-            margin: 25px 0;
-            background: #fff5f8;
-            cursor: url('https://cdn.custom-cursor.com/db/pointer/32/hello_kitty_pointer.png'), pointer; /* 指向链接时的光标 */
-            transition: all 0.3s;
-            color: var(--dark-pink);
-            font-weight: bold;
-        }
-        .file-area:hover {
-            border-color: var(--dark-pink);
-            background: #ffe4ef;
-            transform: scale(1.02); /* 轻微放大 */
-        }
-        .file-area p::before {
-            content: '🎁 ';
-            font-size: 24px;
-        }
-
-        /* --- 核心交互按钮 --- */
-        button.main-btn {
-            background: linear-gradient(to bottom, var(--hot-pink), var(--dark-pink));
-            color: white;
-            border: none;
-            padding: 15px 30px;
-            font-size: 18px;
-            font-weight: bold;
-            border-radius: 50px; /* 胶囊形状 */
-            cursor: url('https://cdn.custom-cursor.com/db/pointer/32/hello_kitty_pointer.png'), pointer;
-            width: 100%;
-            box-shadow: 0 5px 15px rgba(255, 105, 180, 0.4);
-            transition: all 0.2s cubic-bezier(0.175, 0.885, 0.32, 1.275);
-            position: relative;
-            overflow: hidden;
-        }
-        
-        button.main-btn::after {
-            content: '';
-            position: absolute;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 50%;
-            background: rgba(255,255,255,0.2);
-            border-radius: 50px 50px 0 0;
-        }
-
-        button.main-btn:hover {
-             background: linear-gradient(to bottom, #ff7ac1, #e0608c);
-             transform: translateY(-3px);
-             box-shadow: 0 8px 20px rgba(255, 105, 180, 0.6);
-        }
-
-        button.main-btn:active {
-            transform: scale(1.1) translateY(0);
-            box-shadow: 0 2px 5px rgba(255, 105, 180, 0.4);
-            background: linear-gradient(to bottom, var(--dark-pink), var(--hot-pink));
-        }
-
-        button:disabled {
-            background: #ffc0cb;
-            color: #fff;
-            box-shadow: none;
-            cursor: not-allowed;
-            transform: none !important;
-        }
-
-        #status {
-            margin-top: 20px;
-            font-size: 16px;
-            color: var(--dark-pink);
-            font-weight: bold;
-        }
-        .tips {
-            font-size: 13px;
-            color: #999;
-            margin-top: 20px;
-            text-align: left;
-            background: #fff0f5;
-            padding: 10px;
-            border-radius: 10px;
-        }
-        .tips::before {
-             content: '🐱 小贴士：';
-             font-weight: bold;
-             color: var(--hot-pink);
-        }
-    </style>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>掌上财务账本</title>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css">
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<style>
+:root{color-scheme:light;--bg:#eef2ec;--surface:#fff;--surface-alt:#f6f8f4;--text:#173027;--muted:#66776d;--line:#d5ded6;--topbar:rgba(238,242,236,.92);--overlay:rgba(11,17,13,.68);--primary:#18896f;--primary-strong:#0f6d59;--accent:#e07a32;--income:#1d8f57;--expense:#d35d33;--debt:#a67b16;--danger-soft:rgba(211,93,51,.12);--shadow:0 12px 30px rgba(23,48,39,.08)}
+[data-theme="dark"]{color-scheme:dark;--bg:#111713;--surface:#1a211d;--surface-alt:#232b26;--text:#eef3ef;--muted:#99aca1;--line:#303833;--topbar:rgba(17,23,19,.88);--overlay:rgba(0,0,0,.62);--primary:#50c7a8;--primary-strong:#3aa88c;--accent:#f0ad62;--income:#72d8a3;--expense:#ff8d6c;--debt:#f0c45d;--danger-soft:rgba(255,141,108,.16);--shadow:none}
+*{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent}html{scroll-behavior:smooth}body{font-family:"PingFang SC","Microsoft YaHei",system-ui,-apple-system,sans-serif;background:var(--bg);color:var(--text);min-height:100vh;overflow-x:hidden}button,input{font:inherit}button{border:0;background:none;color:inherit}.hidden{display:none!important}img{display:block;width:100%}
+.topbar{position:sticky;top:0;z-index:40;padding:calc(14px + env(safe-area-inset-top)) 16px 12px;background:var(--topbar);backdrop-filter:blur(16px);border-bottom:1px solid var(--line)}
+.topbar-inner,.wrap{max-width:960px;margin:0 auto}.topbar-inner{display:flex;align-items:center;justify-content:space-between;gap:12px}.brand{display:grid;gap:4px;min-width:0}.brand-tag{font-size:.72rem;font-weight:700;color:var(--primary-strong)}.brand h1{font-size:1.24rem;line-height:1.15;font-weight:800}.brand p{font-size:.84rem;line-height:1.5;color:var(--muted)}.icon-btn,.btn,.small,.tabbar button{border-radius:8px}.icon-btn{width:42px;height:42px;border:1px solid var(--line);background:var(--surface);display:inline-flex;align-items:center;justify-content:center;box-shadow:var(--shadow);cursor:pointer;flex-shrink:0}
+.wrap{padding:16px 16px calc(92px + env(safe-area-inset-bottom));display:grid;gap:16px}.hero,.card,.item,.chart-box,.empty,.sheet,.tool{background:var(--surface);border:1px solid var(--line);border-radius:8px;box-shadow:var(--shadow)}
+.hero{overflow:hidden;display:grid;scroll-margin-top:88px}.hero-copy{padding:16px;display:grid;gap:12px}.pill{display:inline-flex;align-items:center;gap:6px;width:fit-content;padding:6px 10px;border-radius:999px;background:rgba(24,137,111,.12);color:var(--primary-strong);font-size:.78rem;font-weight:700}.hero h2{font-size:clamp(1.6rem,6vw,2.2rem);line-height:1.08;font-weight:800;max-width:10ch}.hero p{font-size:.94rem;line-height:1.65;color:var(--muted)}
+.actions,.tools,.stats,.list,.col{display:grid;gap:10px}.actions,.tools{grid-template-columns:repeat(2,minmax(0,1fr))}.btn,.tool,.small{min-height:46px;display:inline-flex;align-items:center;justify-content:center;gap:8px;padding:0 14px;font-weight:700;cursor:pointer}.btn.primary{background:var(--primary);color:#fff}.btn.secondary,.tool,.small{background:var(--surface-alt);border:1px solid var(--line)}
+.stats .card{padding:16px;display:grid;gap:10px}.label,.hint{font-size:.82rem;line-height:1.5;color:var(--muted)}.value{font-size:clamp(1.5rem,7vw,2.3rem);line-height:1.1;font-weight:800;overflow-wrap:anywhere}.accent{color:var(--primary-strong)}.debt{color:var(--debt)}.trend{display:flex;flex-wrap:wrap;align-items:center;gap:10px}.trend-badge{display:inline-flex;align-items:center;gap:6px;font-size:.84rem;font-weight:700}.up{color:var(--income)}.down{color:var(--expense)}.bar{height:8px;border-radius:999px;background:rgba(0,0,0,.08);overflow:hidden}[data-theme="dark"] .bar{background:rgba(255,255,255,.08)}.bar span{display:block;height:100%;width:0;background:linear-gradient(90deg,var(--primary),var(--accent));transition:width .35s ease}
+.grid,.section{display:grid;gap:12px}.section{scroll-margin-top:88px}.head{display:flex;align-items:center;justify-content:space-between;gap:12px}.title{display:grid;gap:4px;min-width:0}.title h3{display:flex;align-items:center;gap:8px;font-size:1.08rem;line-height:1.3;font-weight:800}.small{min-height:40px;padding:0 12px}
+.item{padding:14px;display:grid;gap:10px}.item-top{display:flex;justify-content:space-between;gap:12px;align-items:flex-start}.name{font-size:1rem;line-height:1.4;font-weight:700;word-break:break-word}.amount{font-size:1rem;font-weight:800;white-space:nowrap}.income{color:var(--income)}.expense{color:var(--expense)}.row-actions{display:flex;gap:8px;flex-wrap:wrap}.small.danger{background:var(--danger-soft);border-color:transparent;color:var(--expense)}
+.chart-box{padding:14px}#trendChart{width:100%!important;height:220px!important}.empty{padding:18px 16px;border-style:dashed;box-shadow:none;display:grid;gap:6px}.empty strong{font-size:.95rem;line-height:1.4}
+.modal{position:fixed;inset:0;z-index:80;display:flex;align-items:flex-end;justify-content:center;padding:16px;background:var(--overlay);opacity:0;pointer-events:none;transition:opacity .24s ease}.modal.active{opacity:1;pointer-events:auto}.sheet{width:min(100%,420px);padding:18px 16px 16px;transform:translateY(18px);transition:transform .24s ease}.modal.active .sheet{transform:none}.grab{width:44px;height:4px;border-radius:999px;background:var(--line);margin:0 auto 14px}.sheet-head{display:grid;gap:6px;margin-bottom:16px}.sheet-head h2{font-size:1.2rem;line-height:1.3;font-weight:800}.form,.field{display:grid;gap:8px}.form{gap:14px}.field label{font-size:.86rem;font-weight:700}.field input{width:100%;min-height:46px;padding:0 14px;border-radius:8px;border:1px solid var(--line);background:var(--surface-alt);color:var(--text);outline:none}.field input:focus{border-color:var(--primary)}.form-actions{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
+.tabbar{position:fixed;left:0;right:0;bottom:0;z-index:50;display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:6px;padding:10px 12px calc(10px + env(safe-area-inset-bottom));background:var(--surface);border-top:1px solid var(--line)}.tabbar button{min-height:48px;display:grid;justify-items:center;align-content:center;gap:4px;color:var(--muted);font-size:.72rem;font-weight:700}.tabbar button.active{color:var(--primary-strong);background:rgba(24,137,111,.1)}
+@media (min-width:760px){.wrap{padding-bottom:32px}.stats{grid-template-columns:2fr 1fr 1fr}.tools{grid-template-columns:repeat(4,minmax(0,1fr))}.grid{grid-template-columns:1.1fr .9fr;gap:20px}.modal{align-items:center}.tabbar{display:none}}
+@media (max-width:420px){.item-top{flex-direction:column;align-items:flex-start}.actions,.form-actions{grid-template-columns:1fr}}
+</style>
 </head>
-<body>
-
-<div class="container">
-    <img src="1kitty.png" alt="Hello Kitty" class="kitty-logo">
-    
-    <h2>🎀 Hello Kitty 改图屋 🎀</h2>
-    
-    <div class="input-group">
-        <label>想要的最大宽度 (Width):</label>
-        <input type="number" id="maxWidth" value="800">
+<body data-theme="dark">
+<header class="topbar">
+  <div class="topbar-inner">
+    <div class="brand">
+      <span class="brand-tag">掌上记账</span>
+      <h1>掌上财务账本</h1>
+      <p>收入、支出、欠款、本金，手机上抬手就能记。</p>
     </div>
-    <div class="input-group">
-        <label>想要的最大高度 (Height):</label>
-        <input type="number" id="maxHeight" value="800">
+    <button class="icon-btn" onclick="toggleTheme()" title="切换主题"><i id="themeIcon" class="fa-solid fa-moon"></i></button>
+  </div>
+</header>
+<main class="wrap">
+  <section class="hero" id="overview">
+    <div class="hero-copy">
+      <span class="pill"><i class="fa-solid fa-mobile-screen-button"></i> 手机端优化</span>
+      <h2>记一笔更顺手，看全账也更快。</h2>
+      <p>我把页面改成了更适合手机操作的排版，重点信息放前面，常用按钮更容易单手点到。</p>
+      <div class="actions">
+        <button class="btn primary" onclick="showModal('expense')"><i class="fa-solid fa-receipt"></i>记支出</button>
+        <button class="btn secondary" onclick="showModal('income')"><i class="fa-solid fa-wallet"></i>记收入</button>
+      </div>
     </div>
-
-    <div class="preset-area">
-        <span class="preset-label">✨ 快速变身:</span>
-        <button class="preset-btn" onclick="applyPreset(800, 800)">800 × 800</button>
-        <button class="preset-btn" onclick="applyPreset(750, 1000)">750 × 1000</button>
+  </section>
+  <section class="stats">
+    <article class="card">
+      <span class="label">总余额</span>
+      <strong class="value" id="totalBalance">￥0</strong>
+      <div class="trend"><span class="trend-badge up" id="balanceTrend"><i id="balanceTrendIcon" class="fa-solid fa-arrow-trend-up"></i><span id="balancePercent">+0%</span></span><span class="hint">较上一期本金变化</span></div>
+    </article>
+    <article class="card">
+      <span class="label">当月存入</span>
+      <strong class="value accent" id="monthlySavings">￥0</strong>
+      <div class="bar"><span id="savingBar"></span></div>
+      <span class="hint" id="savingRatio">储蓄率：0%</span>
+    </article>
+    <article class="card">
+      <span class="label">未回收欠款</span>
+      <strong class="value debt" id="totalDebt">￥0</strong>
+      <span class="hint"><span id="debtCount">0</span> 笔待回款</span>
+    </article>
+  </section>
+  <section class="tools">
+    <button class="tool" onclick="showModal('history')"><i class="fa-solid fa-chart-column"></i>更新本金</button>
+    <button class="tool" onclick="exportData()"><i class="fa-solid fa-download"></i>导出数据</button>
+    <button class="tool" onclick="importData()"><i class="fa-solid fa-upload"></i>导入数据</button>
+    <button class="tool" onclick="clearData()"><i class="fa-solid fa-trash-can"></i>清空数据</button>
+  </section>
+  <div class="grid">
+    <div class="col">
+      <section class="section" id="income-section">
+        <div class="head">
+          <div class="title">
+            <h3><i class="fa-solid fa-money-bill-trend-up" style="color:var(--income)"></i> 收入流水</h3>
+            <span class="hint">最近新增会排在最上面，点卡片就能改。</span>
+          </div>
+          <button class="small" onclick="showModal('income')">添加</button>
+        </div>
+        <div class="list" id="incomeList"></div>
+      </section>
+      <section class="section" id="expense-section">
+        <div class="head">
+          <div class="title">
+            <h3><i class="fa-solid fa-cart-shopping" style="color:var(--expense)"></i> 支出流水</h3>
+            <span class="hint">把日常花销拆开记，月底看差额会更直观。</span>
+          </div>
+          <button class="small" onclick="showModal('expense')">添加</button>
+        </div>
+        <div class="list" id="expenseList"></div>
+      </section>
+      <section class="section" id="debt-section">
+        <div class="head">
+          <div class="title">
+            <h3><i class="fa-solid fa-hand-holding-dollar" style="color:var(--debt)"></i> 欠款管理</h3>
+            <span class="hint">这里放借出金额或待回收款，方便单独追踪。</span>
+          </div>
+          <button class="small" onclick="showModal('debt')">添加</button>
+        </div>
+        <div class="list" id="debtList"></div>
+      </section>
     </div>
-
-    <div class="file-area" onclick="document.getElementById('fileInput').click()">
-        <p>点这里把照片交给 Kitty 吧 (支持多选) ✨</p>
-        <input type="file" id="fileInput" multiple accept="image/*" style="display:none" onchange="updateFileCount()">
+    <div class="col">
+      <section class="section" id="analysis-section">
+        <div class="head">
+          <div class="title">
+            <h3><i class="fa-solid fa-chart-line" style="color:var(--primary-strong)"></i> 本金走势</h3>
+            <span class="hint" id="chartHint">按月记录本金后，这里会自动画出变化趋势。</span>
+          </div>
+          <button class="small" onclick="showModal('history')">更新</button>
+        </div>
+        <div class="chart-box"><canvas id="trendChart"></canvas></div>
+      </section>
+      <section class="section" id="history-section">
+        <div class="head">
+          <div class="title">
+            <h3><i class="fa-solid fa-clock-rotate-left" style="color:var(--accent)"></i> 本金历史</h3>
+            <span class="hint">建议按月记录，后面复盘会更省心。</span>
+          </div>
+        </div>
+        <div class="list" id="historyList"></div>
+      </section>
     </div>
-    
-    <div id="fileCount" style="margin-bottom: 15px; color: var(--hot-pink); font-weight: bold;"></div>
-
-    <button id="processBtn" class="main-btn" onclick="processImages()">💖 开始变身并下载! 💖</button>
-    
-    <div id="status"></div>
-    
-    <div class="tips">
-        Kitty 会施展魔法，让图片保持原来的身材比例，然后乖乖钻进你设定的大小框框里哦！不会变胖或变瘦的~
+  </div>
+</main>
+<input type="file" id="importFile" hidden accept=".json,application/json" onchange="handleImport(event)">
+<div class="modal" id="modal" onclick="if(event.target===this)closeModal()">
+  <div class="sheet">
+    <div class="grab"></div>
+    <div class="sheet-head">
+      <h2 id="modalTitle">添加记录</h2>
+      <p class="hint" id="modalDesc">金额会自动加入当前总览。</p>
     </div>
+    <div class="form">
+      <div class="field" id="nameField">
+        <label for="itemName" id="nameLabel">名称 / 分类</label>
+        <input type="text" id="itemName" placeholder="例如：工资、餐饮、房租">
+      </div>
+      <div class="field">
+        <label for="itemAmount" id="amountLabel">金额（￥）</label>
+        <input type="number" id="itemAmount" placeholder="0.00" inputmode="decimal" step="0.01">
+      </div>
+      <div class="field hidden" id="dateField">
+        <label for="itemDate">月份 / 日期</label>
+        <input type="text" id="itemDate" placeholder="例如：2026-04">
+      </div>
+      <div class="form-actions">
+        <button class="small" type="button" onclick="closeModal()">取消</button>
+        <button class="btn primary" type="button" onclick="submitItem()">保存</button>
+      </div>
+    </div>
+  </div>
 </div>
-
+<nav class="tabbar">
+  <button class="active" data-target="overview" onclick="scrollToSection('overview')"><i class="fa-solid fa-house"></i><span>总览</span></button>
+  <button data-target="income-section" onclick="scrollToSection('income-section')"><i class="fa-solid fa-wallet"></i><span>收入</span></button>
+  <button data-target="expense-section" onclick="scrollToSection('expense-section')"><i class="fa-solid fa-receipt"></i><span>支出</span></button>
+  <button data-target="analysis-section" onclick="scrollToSection('analysis-section')"><i class="fa-solid fa-chart-simple"></i><span>分析</span></button>
+</nav>
 <script>
-    function applyPreset(w, h) {
-        document.getElementById('maxWidth').value = w;
-        document.getElementById('maxHeight').value = h;
-    }
-
-    function updateFileCount() {
-        const input = document.getElementById('fileInput');
-        const countDiv = document.getElementById('fileCount');
-        if (input.files.length > 0) {
-            countDiv.textContent = `🐱 已收到 ${input.files.length} 张可爱的图片!`;
-        } else {
-            countDiv.textContent = "";
-        }
-    }
-
-    async function processImages() {
-        const fileInput = document.getElementById('fileInput');
-        const maxWidth = parseInt(document.getElementById('maxWidth').value);
-        const maxHeight = parseInt(document.getElementById('maxHeight').value);
-        const status = document.getElementById('status');
-        const btn = document.getElementById('processBtn');
-
-        if (fileInput.files.length === 0) {
-            alert("还没选择图片呢，Kitty 等你哦！");
-            return;
-        }
-
-        btn.disabled = true;
-        btn.innerHTML = "⏳ Kitty 正在努力施法中...";
-        status.textContent = "✨ 正在变身中，请稍候...";
-
-        const zip = new JSZip();
-        
-        let folderName = "Kitty处理好的图片";
-        if (fileInput.files.length > 0) {
-            const firstFileName = fileInput.files[0].name;
-            folderName = firstFileName.substring(0, firstFileName.lastIndexOf('.')) || firstFileName;
-        }
-
-        const imgFolder = zip.folder(folderName);
-        
-        const promises = [];
-
-        for (let file of fileInput.files) {
-            promises.push(new Promise((resolve) => {
-                const reader = new FileReader();
-                reader.readAsDataURL(file);
-                reader.onload = function(event) {
-                    const img = new Image();
-                    img.src = event.target.result;
-                    img.onload = function() {
-                        let width = img.width;
-                        let height = img.height;
-                        let ratio = 1;
-
-                        if (width > maxWidth || height > maxHeight) {
-                            const widthRatio = maxWidth / width;
-                            const heightRatio = maxHeight / height;
-                            ratio = Math.min(widthRatio, heightRatio);
-                            width = Math.floor(width * ratio);
-                            height = Math.floor(height * ratio);
-                        }
-
-                        const canvas = document.createElement('canvas');
-                        canvas.width = width;
-                        canvas.height = height;
-                        const ctx = canvas.getContext('2d');
-                        
-                        ctx.imageSmoothingEnabled = true;
-                        ctx.imageSmoothingQuality = "high";
-                        
-                        ctx.drawImage(img, 0, 0, width, height);
-
-                        let mimeType = file.type === 'image/jpeg' ? 'image/jpeg' : 'image/png';
-                        
-                        canvas.toBlob(function(blob) {
-                            imgFolder.file(file.name, blob);
-                            resolve();
-                        }, mimeType, 0.95);
-                    };
-                };
-            }));
-        }
-
-        await Promise.all(promises);
-
-        status.textContent = "🎁 变身完成！正在打包礼物盒...";
-        
-        zip.generateAsync({type:"blob"}).then(function(content) {
-            saveAs(content, folderName + ".zip");
-            status.innerHTML = "✅ 完成啦！礼物盒已经送达 (已自动下载) 🎉";
-            btn.disabled = false;
-            btn.innerHTML = "💖 开始变身并下载! 💖";
-        });
-    }
+const KEYS=['mobile_finance_book_data','nano_finance_data'];
+let data={income:[],expense:[],debt:[],history:[],theme:'dark'};
+let chart=null,currentType='income',editIndex=null;
+const recordTip={income:'点卡片可编辑，适合工资、奖金、兼职等收入。',expense:'点卡片可编辑，适合餐饮、交通、房租等支出。',debt:'点卡片可编辑，适合记录借出金额和回款对象。'};
+const emptyText={income:['还没有收入记录','先记下最近一笔收入，后面看月度差额会更准。'],expense:['还没有支出记录','把花销拆开记下来，月底会更容易复盘。'],debt:['暂时没有待回款','有外借金额时再补进来，追踪会更轻松。'],history:['还没有本金历史','先点“更新本金”，趋势图就会开始累计。']};
+function roundMoney(v){return Math.round((v+Number.EPSILON)*100)/100}
+function money(v){const abs=Math.abs(Number(v)||0);const has=Math.abs(abs%1)>.0001;const text=abs.toLocaleString('zh-CN',{minimumFractionDigits:has?2:0,maximumFractionDigits:2});return (v<0?'-￥':'￥')+text}
+function escapeHtml(text){return String(text??'').replace(/[&<>"']/g,function(s){return({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'})[s]})}
+function safeItem(item){if(!item||typeof item!=='object')return null;const name=String(item.name||'').trim();const amount=Number(item.amount);return name&&Number.isFinite(amount)?{name:name,amount:roundMoney(amount)}:null}
+function safeHistory(item){if(!item||typeof item!=='object')return null;const date=String(item.date||'').trim();const principal=Number(item.principal);return date&&Number.isFinite(principal)?{date:date,principal:roundMoney(principal)}:null}
+function normalize(raw){return{income:(Array.isArray(raw&&raw.income)?raw.income:[]).map(safeItem).filter(Boolean),expense:(Array.isArray(raw&&raw.expense)?raw.expense:[]).map(safeItem).filter(Boolean),debt:(Array.isArray(raw&&raw.debt)?raw.debt:[]).map(safeItem).filter(Boolean),history:(Array.isArray(raw&&raw.history)?raw.history:[]).map(safeHistory).filter(Boolean),theme:raw&&raw.theme==='light'?'light':'dark'}}
+function save(){localStorage.setItem(KEYS[0],JSON.stringify(data))}
+function load(){for(const key of KEYS){const raw=localStorage.getItem(key);if(!raw)continue;try{data=normalize(JSON.parse(raw));break}catch(e){console.error(e)}}document.body.setAttribute('data-theme',data.theme);syncThemeIcon();renderAll()}
+function syncThemeIcon(){document.getElementById('themeIcon').className=document.body.getAttribute('data-theme')==='dark'?'fa-solid fa-moon':'fa-solid fa-sun'}
+function toggleTheme(){const next=document.body.getAttribute('data-theme')==='dark'?'light':'dark';document.body.setAttribute('data-theme',next);data.theme=next;syncThemeIcon();save();updateChart()}
+function emptyBlock(type){const copy=emptyText[type];return '<div class="empty"><strong>'+copy[0]+'</strong><span class="hint">'+copy[1]+'</span></div>'}
+function renderRecords(id,type){const list=data[type];const host=document.getElementById(id);if(!list.length){host.innerHTML=emptyBlock(type);return}host.innerHTML=list.map((item,index)=>({item:item,index:index})).reverse().map(function(entry){const cls=type==='income'?'income':type==='expense'?'expense':'debt';return '<article class="item" onclick="editItem(\''+type+'\','+entry.index+')"><div class="item-top"><div><div class="name">'+escapeHtml(entry.item.name)+'</div><div class="hint">'+recordTip[type]+'</div></div><div class="amount '+cls+'">'+money(entry.item.amount)+'</div></div><div class="row-actions"><button class="small" type="button" onclick="event.stopPropagation();editItem(\''+type+'\','+entry.index+')">编辑</button><button class="small danger" type="button" onclick="event.stopPropagation();deleteItem(\''+type+'\','+entry.index+')">删除</button></div></article>'}).join('')}
+function renderHistory(){const host=document.getElementById('historyList');if(!data.history.length){host.innerHTML=emptyBlock('history');return}host.innerHTML=data.history.map((item,index)=>({item:item,index:index})).reverse().map(function(entry){return '<article class="item" onclick="editItem(\'history\','+entry.index+')"><div class="item-top"><div><div class="name">'+escapeHtml(entry.item.date)+' 本金</div><div class="hint">点卡片可编辑，建议按月追加，方便看趋势。</div></div><div class="amount accent">'+money(entry.item.principal)+'</div></div><div class="row-actions"><button class="small" type="button" onclick="event.stopPropagation();editItem(\'history\','+entry.index+')">编辑</button><button class="small danger" type="button" onclick="event.stopPropagation();deleteItem(\'history\','+entry.index+')">删除</button></div></article>'}).join('')}
+function calcStats(){const income=data.income.reduce((s,i)=>s+i.amount,0);const expense=data.expense.reduce((s,i)=>s+i.amount,0);const debt=data.debt.reduce((s,i)=>s+i.amount,0);const savings=income-expense;const latest=data.history.length?data.history[data.history.length-1].principal:0;const prev=data.history.length>1?data.history[data.history.length-2].principal:latest;const balance=savings+debt+latest;document.getElementById('totalBalance').textContent=money(balance);document.getElementById('monthlySavings').textContent=money(savings);document.getElementById('totalDebt').textContent=money(debt);document.getElementById('debtCount').textContent=String(data.debt.length);const ratio=income>0?roundMoney(savings/income*100):0;document.getElementById('savingBar').style.width=Math.min(Math.max(ratio,0),100)+'%';document.getElementById('savingRatio').textContent='储蓄率：'+ratio+'%';const growth=prev>0?roundMoney((latest-prev)/prev*100):0;document.getElementById('balancePercent').textContent=(growth>=0?'+':'')+growth+'%';const badge=document.getElementById('balanceTrend');badge.className='trend-badge '+(growth>=0?'up':'down');document.getElementById('balanceTrendIcon').className='fa-solid '+(growth>=0?'fa-arrow-trend-up':'fa-arrow-trend-down')}
+function updateChart(){const labels=data.history.map(i=>i.date);const values=data.history.map(i=>i.principal);document.getElementById('chartHint').textContent=labels.length?'最近记录会直接更新走势，方便你在手机上快速复盘。':'还没有本金记录，先点上方“更新”或“更新本金”。';const css=getComputedStyle(document.body);const line=css.getPropertyValue('--primary').trim();const point=css.getPropertyValue('--accent').trim();const grid=css.getPropertyValue('--line').trim();const tick=css.getPropertyValue('--muted').trim();const ctx=document.getElementById('trendChart').getContext('2d');if(chart)chart.destroy();chart=new Chart(ctx,{type:'line',data:{labels:labels,datasets:[{data:values,borderColor:line,borderWidth:3,pointBackgroundColor:point,pointBorderColor:line,pointRadius:labels.length>1?3:4,tension:.35,fill:true,backgroundColor:function(context){const area=context.chart.chartArea;if(!area)return 'rgba(24,137,111,.16)';const gradient=context.chart.ctx.createLinearGradient(0,area.top,0,area.bottom);gradient.addColorStop(0,'rgba(24,137,111,.22)');gradient.addColorStop(1,'rgba(24,137,111,.02)');return gradient;}}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},scales:{y:{grid:{color:grid},ticks:{color:tick}},x:{grid:{display:false},ticks:{color:tick}}}}})}
+function renderAll(){renderRecords('incomeList','income');renderRecords('expenseList','expense');renderRecords('debtList','debt');renderHistory();calcStats();updateChart();syncTab()}
+function modalCopy(type,isEdit){const a=isEdit?'编辑':'添加';if(type==='income')return{title:a+'收入',desc:'收入会计入当月存入和总余额。',name:'收入名称',ph:'例如：工资、奖金、报销'};if(type==='expense')return{title:a+'支出',desc:'支出会直接影响当月收支差。',name:'支出名称',ph:'例如：餐饮、交通、房租'};if(type==='debt')return{title:a+'待回款',desc:'待回款会单独计入未回收欠款。',name:'对象 / 说明',ph:'例如：小王借款、临时垫付'};return{title:a+'本金记录',desc:'建议按月记录，趋势图会按输入顺序累积。',name:'',ph:''}}
+function showModal(type,index){currentType=type;editIndex=typeof index==='number'?index:null;const item=editIndex===null?null:data[type][editIndex];const isHistory=type==='history';const copy=modalCopy(type,editIndex!==null);document.getElementById('modalTitle').textContent=copy.title;document.getElementById('modalDesc').textContent=copy.desc;document.getElementById('nameField').classList.toggle('hidden',isHistory);document.getElementById('dateField').classList.toggle('hidden',!isHistory);document.getElementById('nameLabel').textContent=copy.name;document.getElementById('itemName').placeholder=copy.ph;document.getElementById('amountLabel').textContent=isHistory?'本金（￥）':'金额（￥）';document.getElementById('itemName').value=item&&!isHistory?item.name:'';document.getElementById('itemAmount').value=item?(isHistory?item.principal:item.amount):'';document.getElementById('itemDate').value=item&&isHistory?item.date:'';document.getElementById('modal').classList.add('active');setTimeout(()=>{(isHistory?document.getElementById('itemDate'):document.getElementById('itemName')).focus()},60)}
+function closeModal(){document.getElementById('modal').classList.remove('active');editIndex=null}
+function editItem(type,index){showModal(type,index)}
+function submitItem(){const isHistory=currentType==='history';const amount=roundMoney(Number(document.getElementById('itemAmount').value));if(!Number.isFinite(amount)){alert('请输入正确金额');return}if(isHistory){const date=document.getElementById('itemDate').value.trim();if(!date){alert('请输入月份或日期');return}const entry={date:date,principal:amount};if(editIndex===null)data.history.push(entry);else data.history[editIndex]=entry}else{const name=document.getElementById('itemName').value.trim();if(!name){alert('请输入名称');return}const entry={name:name,amount:amount};if(editIndex===null)data[currentType].push(entry);else data[currentType][editIndex]=entry}save();renderAll();closeModal()}
+function deleteItem(type,index){const label=type==='history'?'这条本金记录':'这条记录';if(!confirm('确定删除'+label+'吗？'))return;data[type].splice(index,1);save();renderAll()}
+function exportData(){const stamp=new Date().toISOString().slice(0,10);const blob=new Blob([JSON.stringify(data,null,2)],{type:'application/json;charset=utf-8'});const url=URL.createObjectURL(blob);const a=document.createElement('a');a.href=url;a.download='finance_data_'+stamp+'.json';a.click();URL.revokeObjectURL(url)}
+function importData(){document.getElementById('importFile').click()}
+function handleImport(e){const file=e.target.files&&e.target.files[0];if(!file)return;const reader=new FileReader();reader.onload=function(ev){try{data=normalize(JSON.parse(ev.target.result));document.body.setAttribute('data-theme',data.theme);syncThemeIcon();save();renderAll();alert('数据导入成功')}catch(err){alert('导入失败，请检查 JSON 格式')}finally{e.target.value=''}};reader.readAsText(file,'utf-8')}
+function clearData(){if(!confirm('确定清空所有数据吗？这个动作不能撤销。'))return;data={income:[],expense:[],debt:[],history:[],theme:document.body.getAttribute('data-theme')||'dark'};save();renderAll()}
+function setTab(id){document.querySelectorAll('.tabbar button').forEach(btn=>btn.classList.toggle('active',btn.dataset.target===id))}
+function scrollToSection(id){const el=document.getElementById(id);if(!el)return;el.scrollIntoView({behavior:'smooth',block:'start'});setTab(id)}
+function syncTab(){const ids=['overview','income-section','expense-section','analysis-section'];const top=window.scrollY+160;let current='overview';ids.forEach(id=>{const el=document.getElementById(id);if(el&&top>=el.offsetTop)current=id});setTab(current)}
+window.addEventListener('DOMContentLoaded',function(){load();window.addEventListener('scroll',syncTab,{passive:true});document.addEventListener('keydown',function(e){if(e.key==='Escape')closeModal()})})
 </script>
-
 </body>
 </html>
