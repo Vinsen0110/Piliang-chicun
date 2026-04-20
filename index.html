@@ -36,17 +36,19 @@ h1{font-size:1.6rem;font-weight:700}
 .month-label{font-size:1.1rem;font-weight:600;min-width:140px;text-align:center}
 
 /* Summary Cards */
-.summary{display:grid;grid-template-columns:repeat(3,1fr);gap:14px;margin-bottom:24px}
+.summary{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin-bottom:24px}
 .summary-card{background:var(--card);border-radius:16px;padding:20px;position:relative;overflow:hidden;border:1px solid var(--border)}
 .summary-card::before{content:'';position:absolute;top:0;left:0;right:0;height:3px}
 .summary-card.income::before{background:linear-gradient(90deg,var(--green),#55efc4)}
 .summary-card.expense::before{background:linear-gradient(90deg,var(--red),#fab1a0)}
 .summary-card.balance::before{background:linear-gradient(90deg,var(--accent),var(--accent2))}
+.summary-card.debt::before{background:linear-gradient(90deg,#fdcb6e,#e17055)}
 .summary-card .label{font-size:.78rem;color:var(--text2);margin-bottom:8px;text-transform:uppercase;letter-spacing:1px}
 .summary-card .amount{font-size:1.5rem;font-weight:700}
 .summary-card.income .amount{color:var(--green)}
 .summary-card.expense .amount{color:var(--red)}
 .summary-card.balance .amount{color:var(--accent2)}
+.summary-card.debt .amount{color:#fdcb6e}
 
 /* Chart Area */
 .chart-section{background:var(--card);border-radius:16px;padding:20px;margin-bottom:24px;border:1px solid var(--border)}
@@ -126,10 +128,26 @@ h1{font-size:1.6rem;font-weight:700}
 
 /* Responsive */
 @media(max-width:768px){
-  .summary{grid-template-columns:repeat(3,1fr)}
+  .summary{grid-template-columns:repeat(2,1fr)}
   .bar-chart{gap:3px}
   .bar-label{font-size:.62rem}
 }
+/* Debt Section */
+.debt-section{background:var(--card);border-radius:16px;padding:20px;margin-bottom:24px;border:1px solid var(--border)}
+.debt-section h3{font-size:.95rem;font-weight:600;margin-bottom:16px}
+.debt-form{display:flex;gap:10px;flex-wrap:wrap;margin-bottom:14px}
+.debt-form input{flex:1 1 120px;background:var(--bg);border:1px solid var(--border);color:var(--text);padding:10px 12px;border-radius:10px;font-size:.85rem;outline:none;transition:.2s}
+.debt-form input:focus{border-color:var(--accent)}
+.light-mode .debt-form input{background:var(--bg);color:var(--text);border-color:var(--border)}
+.btn-debt{background:linear-gradient(135deg,#fdcb6e,#e17055);color:#fff;border:none;padding:10px 20px;border-radius:10px;cursor:pointer;font-size:.85rem;font-weight:600;transition:.2s}
+.btn-debt:hover{transform:translateY(-1px);box-shadow:0 4px 15px rgba(253,203,110,.4)}
+.debt-list{display:flex;flex-direction:column;gap:8px;max-height:260px;overflow-y:auto}
+.debt-item{display:flex;align-items:center;gap:12px;padding:12px;background:var(--card2);border-radius:12px}
+.debt-item .debt-name{flex:1;font-size:.85rem;font-weight:500}
+.debt-item .debt-amt{color:#fdcb6e;font-weight:600;font-size:.9rem;flex-shrink:0}
+.debt-item .debt-note{font-size:.72rem;color:var(--text2);flex-shrink:0;max-width:120px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.debt-item .tx-del{background:none;border:none;color:var(--text2);cursor:pointer;font-size:.9rem;padding:4px;border-radius:6px;transition:.2s;flex-shrink:0}
+.debt-item .tx-del:hover{color:var(--red);background:rgba(255,118,117,.1)}
 @media(max-width:520px){
   .app{padding:14px 12px 60px}
   h1{font-size:1.3rem}
@@ -183,8 +201,12 @@ h1{font-size:1.6rem;font-weight:700}
       <div class="label">支出</div>
       <div class="amount" id="totalExpense">¥0.00</div>
     </div>
+    <div class="summary-card debt">
+      <div class="label">他人欠款</div>
+      <div class="amount" id="totalDebt">¥0.00</div>
+    </div>
     <div class="summary-card balance">
-      <div class="label">结余</div>
+      <div class="label">总结余</div>
       <div class="amount" id="totalBalance">¥0.00</div>
     </div>
   </div>
@@ -229,6 +251,18 @@ h1{font-size:1.6rem;font-weight:700}
     <button class="btn-add" onclick="addEntry()">添加</button>
   </div>
 
+  <!-- Debt Section -->
+  <div class="debt-section">
+    <h3>🤝 他人欠款</h3>
+    <div class="debt-form">
+      <input type="text" id="debtName" placeholder="欠款人姓名" maxlength="20">
+      <input type="number" id="debtAmount" placeholder="金额 (¥)" step="0.01" min="0">
+      <input type="text" id="debtNote" placeholder="备注（可选）" maxlength="30">
+      <button class="btn-debt" onclick="addDebt()">记录欠款</button>
+    </div>
+    <div class="debt-list" id="debtList"></div>
+  </div>
+
   <!-- Transaction List -->
   <div class="list-section">
     <div class="list-header">
@@ -265,8 +299,10 @@ let currentMonth = new Date();
 currentMonth.setDate(1);
 
 let entries = JSON.parse(localStorage.getItem('finance_entries') || '[]');
+let debts = JSON.parse(localStorage.getItem('finance_debts') || '[]');
 
 function save(){ localStorage.setItem('finance_entries', JSON.stringify(entries)); }
+function saveDebts(){ localStorage.setItem('finance_debts', JSON.stringify(debts)); }
 
 function fmt(n){ return '¥' + Math.abs(n).toFixed(2); }
 
@@ -337,13 +373,57 @@ function delEntry(id){
   render();
 }
 
+function getTotalDebt(){
+  return debts.reduce((s,d)=>s+d.amount,0);
+}
+
 function renderSummary(){
   const me = getMonthEntries();
   const inc = me.filter(e=>e.type==='income').reduce((s,e)=>s+e.amount,0);
   const exp = me.filter(e=>e.type==='expense').reduce((s,e)=>s+e.amount,0);
+  const debt = getTotalDebt();
+  const balance = inc - exp + debt;
   document.getElementById('totalIncome').textContent = fmt(inc);
   document.getElementById('totalExpense').textContent = fmt(exp);
-  document.getElementById('totalBalance').textContent = (inc-exp>=0?'¥':'-¥') + Math.abs(inc-exp).toFixed(2);
+  document.getElementById('totalDebt').textContent = fmt(debt);
+  document.getElementById('totalBalance').textContent = (balance>=0?'¥':'-¥') + Math.abs(balance).toFixed(2);
+}
+
+function addDebt(){
+  const name = document.getElementById('debtName').value.trim();
+  const amount = parseFloat(document.getElementById('debtAmount').value);
+  if(!name || !amount || amount <= 0) return;
+  const note = document.getElementById('debtNote').value.trim();
+  debts.push({ id: Date.now(), name, amount, note });
+  saveDebts();
+  document.getElementById('debtName').value = '';
+  document.getElementById('debtAmount').value = '';
+  document.getElementById('debtNote').value = '';
+  renderDebtList();
+  renderSummary();
+}
+
+function delDebt(id){
+  debts = debts.filter(d=>d.id!==id);
+  saveDebts();
+  renderDebtList();
+  renderSummary();
+}
+
+function renderDebtList(){
+  const list = document.getElementById('debtList');
+  if(debts.length === 0){
+    list.innerHTML = '<div class="empty-state">暂无欠款记录 ✨</div>';
+    return;
+  }
+  list.innerHTML = debts.map(d=>`
+    <div class="debt-item">
+      <div class="debt-name">👤 ${d.name}</div>
+      ${d.note ? `<div class="debt-note">${d.note}</div>` : ''}
+      <div class="debt-amt">+${fmt(d.amount)}</div>
+      <button class="tx-del" onclick="delDebt(${d.id})">✕</button>
+    </div>
+  `).join('');
 }
 
 function renderBarChart(){
@@ -463,6 +543,7 @@ function render(){
   renderDonutChart();
   renderCatTags();
   renderList();
+  renderDebtList();
 }
 
 // Theme toggle
