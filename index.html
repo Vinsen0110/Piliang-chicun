@@ -121,6 +121,19 @@ h1{font-size:1.6rem;font-weight:700}
 .tx-del{background:none;border:none;color:var(--text2);cursor:pointer;font-size:.9rem;padding:4px;border-radius:6px;transition:.2s;flex-shrink:0}
 .tx-del:hover{color:var(--red);background:rgba(255,118,117,.1)}
 .empty-state{text-align:center;padding:40px;color:var(--text2);font-size:.85rem}
+/* History Table */
+.history-table{width:100%;border-collapse:collapse;font-size:.82rem}
+.history-table th{color:var(--text2);font-weight:500;padding:8px 10px;text-align:right;border-bottom:1px solid var(--border)}
+.history-table th:first-child{text-align:left}
+.history-table td{padding:10px 10px;text-align:right;border-bottom:1px solid var(--border)}
+.history-table td:first-child{text-align:left;font-weight:500}
+.history-table tr:last-child td{border-bottom:none}
+.history-table tr:hover td{background:var(--card2)}
+.ht-inc{color:var(--green)}
+.ht-exp{color:var(--red)}
+.ht-debt{color:#fdcb6e}
+.ht-bal-pos{color:var(--accent2);font-weight:600}
+.ht-bal-neg{color:var(--red);font-weight:600}
 
 /* Animations */
 @keyframes fadeIn{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:translateY(0)}}
@@ -271,9 +284,11 @@ h1{font-size:1.6rem;font-weight:700}
         <div class="filter-chip active" onclick="setFilter('all',this)">全部</div>
         <div class="filter-chip" onclick="setFilter('income',this)">收入</div>
         <div class="filter-chip" onclick="setFilter('expense',this)">支出</div>
+        <div class="filter-chip" onclick="setFilter('history',this)">历史余额</div>
       </div>
     </div>
     <div class="tx-list" id="txList"></div>
+    <div id="historyView" style="display:none"></div>
   </div>
 </div>
 
@@ -514,6 +529,15 @@ function switchChart(type, btn){
 
 function renderList(){
   const list = document.getElementById('txList');
+  const hv = document.getElementById('historyView');
+  if(currentFilter === 'history'){
+    list.style.display = 'none';
+    hv.style.display = 'block';
+    renderHistory(hv);
+    return;
+  }
+  list.style.display = 'flex';
+  hv.style.display = 'none';
   let me = getMonthEntries();
   if(currentFilter !== 'all') me = me.filter(e=>e.type===currentFilter);
   if(me.length === 0){
@@ -532,6 +556,48 @@ function renderList(){
       <button class="tx-del" onclick="delEntry(${e.id})">✕</button>
     </div>
   `).join('');
+}
+
+function renderHistory(container){
+  if(entries.length === 0){
+    container.innerHTML = '<div class="empty-state">暂无历史数据 ✨</div>';
+    return;
+  }
+  // 按月分组
+  const monthMap = {};
+  entries.forEach(e=>{
+    const key = e.date.slice(0,7);
+    if(!monthMap[key]) monthMap[key] = {inc:0, exp:0};
+    if(e.type==='income') monthMap[key].inc += e.amount;
+    else monthMap[key].exp += e.amount;
+  });
+  const debt = getTotalDebt();
+  const months = Object.keys(monthMap).sort().reverse();
+  let cumBal = 0;
+  // 正向累计余额（从最早到最新）
+  const balMap = {};
+  [...months].reverse().forEach(k=>{
+    cumBal += monthMap[k].inc - monthMap[k].exp;
+    balMap[k] = cumBal;
+  });
+  // 最新月加上欠款
+  if(months.length > 0) balMap[months[0]] += debt;
+  const rows = months.map(k=>{
+    const {inc,exp} = monthMap[k];
+    const bal = balMap[k];
+    const isLatest = k === months[0];
+    return `<tr>
+      <td>${k.replace('-','年')}月${isLatest?' <span style="font-size:.7rem;color:var(--accent2)">(本月)</span>':''}</td>
+      <td class="ht-inc">+${fmt(inc)}</td>
+      <td class="ht-exp">-${fmt(exp)}</td>
+      <td class="ht-debt">${isLatest?'+'+fmt(debt):'—'}</td>
+      <td class="${bal>=0?'ht-bal-pos':'ht-bal-neg'}">${bal>=0?'':'-'}${fmt(Math.abs(bal))}</td>
+    </tr>`;
+  }).join('');
+  container.innerHTML = `<table class="history-table">
+    <thead><tr><th>月份</th><th>收入</th><th>支出</th><th>欠款</th><th>结余</th></tr></thead>
+    <tbody>${rows}</tbody>
+  </table>`;
 }
 
 function render(){
